@@ -46,7 +46,7 @@ external_disk=$(diskutil list | awk '/external/,/^$/')
 if is_root; then
     if [ "$external_disk" = "" ]; then
         banner
-        echo "External disk is empty!"
+        echo "External disks are empty!"
     else
         banner
         echo -e "$external_disk\n"
