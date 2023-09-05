@@ -23,4 +23,4 @@ sudo ./ntfsmounter
 ```
 
 ## Screenshot
-![Terminal screenshot](https://github.com/zavierferodova/Mac-NTFS-Mounter/blob/main/screenshots/image.jpg?raw=true)
+![Terminal screenshot](https://github.com/zavierferodova/Mac-NTFS-Mounter/blob/main/screenshots/image.png?raw=true)
