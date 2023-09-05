@@ -17,7 +17,7 @@ brew install ntfs-3g-mac
 ```bash
 chmod +x ntfsmounter
 ```
-3. Run it with `sudo`
+2. Run it with `sudo`
 ```bash
 sudo ./ntfsmounter
 ```
