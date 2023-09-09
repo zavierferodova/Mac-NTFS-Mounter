@@ -38,7 +38,20 @@ generate_unique_string() {
 mount_disk() {
     printf "Enter disk identifier (ex: disk0s3): "
     read identifier
-    ntfs-3g /dev/$identifier /Volumes/NTFS-$(generate_unique_string) && echo "Command completed!"
+    ntfs-3g /dev/$identifier \
+        /Volumes/NTFS-$(generate_unique_string) \
+        -o volname="${VOLUME_NAME}" \
+        -o local \
+        -o negative_vncache \
+        -o auto_xattr \
+        -o auto_cache \
+        -o noatime \
+        -o windows_names \
+        -o user_xattr \
+        -o inherit \
+        -o allow_other \
+        "$@" &> /var/log/mount-ntfs-3g.log \
+        && echo "Command completed!"
 }
 
 clear
