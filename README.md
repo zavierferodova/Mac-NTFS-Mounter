@@ -13,11 +13,12 @@ brew install ntfs-3g-mac
 ```
 
 ## Usage
-1. Add execute permission on `ntfsmounter` script
+1. Plug your NTFS disk and make sure the disk is already mounted
+2. Add execute permission on `ntfsmounter` script
 ```bash
 chmod +x ntfsmounter
 ```
-2. Run it with `sudo`
+1. Run it with `sudo`
 ```bash
 sudo ./ntfsmounter
 ```

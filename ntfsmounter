@@ -20,50 +20,88 @@ is_root() {
     fi
 }
 
-generate_unique_string() {
-    # Define the characters to use
-    characters="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-    length=5  # Change this to adjust the length of the string
-    unique_string=""
+get_external_volumes() {
+    local volumes_list=$(ls -1 /Volumes)
+    local external_volumes=()
+    local external_identifiers=()
 
-    # Generate the unique string
-    while [ ${#unique_string} -lt $length ]; do
-        random_character="${characters:RANDOM % ${#characters}:1}"
-        unique_string="${unique_string}${random_character}"
+    while read -r volume; do 
+        local disk_information=$(diskutil list | awk '/external/,/^$/' | grep "$volume")
+        if [ -n "$disk_information" ]; then
+            local identifier=$(echo "$disk_information" | awk '{print $NF}')
+            external_identifiers+=("$identifier")
+            external_volumes+=("$volume")
+        fi
+    done <<< "$volumes_list"
+
+    # Join arrays with a separator and echo them for return
+    echo "$(IFS="|"; echo "${external_volumes[*]}")|$(IFS="|"; echo "${external_identifiers[*]}")"
+}
+
+print_volumes() {
+    local volumes=("$@")
+    local count=1
+
+    for volume in "${volumes[@]}"; do
+        echo "[${count}] $volume"
+        ((count++))
     done
-
-    echo "$unique_string"
 }
 
-mount_disk() {
-    printf "Enter disk identifier (ex: disk0s3): "
-    read identifier
-    ntfs-3g /dev/$identifier \
-        /Volumes/NTFS-$(generate_unique_string) \
-        -o volname="${VOLUME_NAME}" \
-        -o local \
-        -o negative_vncache \
-        -o auto_xattr \
-        -o auto_cache \
-        -o noatime \
-        -o windows_names \
-        -o user_xattr \
-        -o inherit \
-        -o allow_other \
-        "$@" &> /var/log/mount-ntfs-3g.log \
-        && echo "Command completed!"
-}
+result=$(get_external_volumes)
 
-clear
-external_disk=$(diskutil list | awk '/external/,/^$/')
+# Split the returned string into two arrays
+IFS="|" read -r external_volumes_str external_identifiers_str <<< "$result"
+IFS="|" read -ra external_volumes <<< "$external_volumes_str"
+IFS="|" read -ra external_identifiers <<< "$external_identifiers_str"
+
 if is_root; then
-    if [ "$external_disk" = "" ]; then
+    if [ -z "${external_volumes[@]}" ]; then
         banner
         echo "External disks are empty!"
     else
         banner
-        echo -e "$external_disk\n"
-        mount_disk
+        printf "Choose external volume to mount:\n"
+        print_volumes "${external_volumes[@]}"
+        printf "\n~> "
+        read selected_index
+
+        if [[ "$selected_index" =~ ^-?[0-9]+$ ]]; then
+            if [[ $selected_index -gt -1 ]] && [[ $selected_index -le ${#external_volumes[@]} ]]; then
+                selected_disk_name="${external_volumes[$selected_index-1]}"
+                selected_identifier="${external_identifiers[$selected_index-1]}"
+
+                printf "\nProcessing....\n"
+                printf "Selected volume $selected_disk_name on $selected_identifier\n"
+                printf "Unmounting volume $selected_disk_name\n"
+                diskutil unmount "/Volumes/${selected_disk_name}"
+                
+                printf "Remounting volume $selected_disk_name on $selected_identifier\n"
+                ntfs-3g /dev/$selected_identifier \
+                    "/Volumes/$selected_disk_name" \
+                    -o volname="${VOLUME_NAME}" \
+                    -o local \
+                    -o negative_vncache \
+                    -o auto_xattr \
+                    -o auto_cache \
+                    -o noatime \
+                    -o windows_names \
+                    -o user_xattr \
+                    -o inherit \
+                    -o allow_other \
+                    &> /var/log/mount-ntfs-3g.log
+
+                if [ $? -eq 0 ]; then
+                    echo "Command completed!"
+                else
+                    echo "Failed to mount volume. Check /var/log/mount-ntfs-3g.log for details."
+                fi
+            else
+                printf "\nVolume not available !\n"
+            fi
+        else
+            printf "\nVolume not available !\n"
+        fi
     fi
 else
     banner
